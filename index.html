@@ -1,0 +1,356 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<meta name="theme-color" content="#1a6a56">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="เปิด HTML">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<title>เปิดไฟล์ HTML</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Thai:wght@400;500;600&display=swap">
+<style>
+/* Layout: single column utility app. Home (pick / paste / recent) swaps with a full-screen viewer. */
+:root {
+  --bg: #f3f6f4;
+  --surface: #ffffff;
+  --ink: #16201c;
+  --muted: #5a6963;
+  --line: #d6dfdb;
+  --accent: #1a6a56;
+  --accent-ink: #ffffff;
+  --danger: #b3392f;
+  --font-body: "IBM Plex Sans Thai", system-ui, "Thonburi", "Noto Sans Thai", sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0e1412; --surface: #172120; --ink: #e7eeeb; --muted: #94a49e;
+    --line: #29362f; --accent: #5cc4a5; --accent-ink: #06241b; --danger: #f0867c;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0e1412; --surface: #172120; --ink: #e7eeeb; --muted: #94a49e;
+  --line: #29362f; --accent: #5cc4a5; --accent-ink: #06241b; --danger: #f0867c;
+  color-scheme: dark;
+}
+:root { color-scheme: light; padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); }
+body { margin: 0; }
+* { box-sizing: border-box; }
+html, body { min-height: 100%; }
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font: 400 16px/1.55 var(--font-body);
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 24px 40px;
+}
+button, input, textarea { font: inherit; color: inherit; }
+button { cursor: pointer; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.wrap { max-width: 560px; margin: 0 auto; display: grid; gap: 24px; }
+h1 { font-size: 1.75rem; line-height: 1.25; font-weight: 600; margin: 0; text-wrap: balance; }
+.lead { color: var(--muted); margin: 6px 0 0; }
+
+.tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 3px; padding: 3px; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; }
+.tab { min-height: 44px; border: 0; border-radius: 9px; background: transparent; color: var(--muted); font-weight: 500; }
+.tab[aria-selected="true"] { background: var(--accent); color: var(--accent-ink); }
+
+.pick {
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px;
+  min-height: 132px; padding: 16px; text-align: center;
+  border: 1.5px dashed var(--accent); border-radius: 16px; background: var(--surface);
+  color: var(--accent); font-weight: 600; font-size: 1.0625rem; cursor: pointer;
+}
+.pick small { color: var(--muted); font-weight: 400; font-size: .875rem; }
+.pick.drag { background: color-mix(in srgb, var(--accent) 12%, var(--surface)); }
+.sr { position: absolute; width: 1px; height: 1px; opacity: 0; overflow: hidden; }
+.sr:focus-visible + .pick, .pick:focus-within { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+textarea {
+  width: 100%; min-height: 220px; resize: vertical; padding: 12px;
+  font: 16px/1.5 var(--font-mono); background: var(--surface);
+  border: 1px solid var(--line); border-radius: 12px;
+}
+.btn {
+  min-height: 48px; padding: 0 20px; border-radius: 12px; border: 1px solid var(--line);
+  background: var(--surface); font-weight: 500;
+}
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); font-weight: 600; }
+.panel[data-p="paste"] { display: grid; gap: 12px; }
+.panel[data-p="paste"] .btn { width: 100%; }
+
+.msg { min-height: 1.4em; margin: 0; color: var(--danger); font-size: .9375rem; }
+
+.recent-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 8px; }
+.recent-head h2 { margin: 0; font-size: .9375rem; font-weight: 600; color: var(--muted); }
+.link { border: 0; background: none; color: var(--accent); padding: 8px 0; font-size: .9375rem; }
+.list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.item { display: flex; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+.item .open { flex: 1; min-width: 0; min-height: 58px; padding: 10px 14px; text-align: left; border: 0; background: transparent; }
+.name { display: block; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.meta { display: block; color: var(--muted); font: .8125rem var(--font-mono); }
+.item .del { width: 48px; border: 0; border-left: 1px solid var(--line); background: transparent; color: var(--muted); display: grid; place-items: center; }
+.empty { padding: 20px 16px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); color: var(--muted); display: grid; gap: 10px; justify-items: start; }
+.empty p { margin: 0; }
+
+.notes { color: var(--muted); font-size: .875rem; display: grid; gap: 10px; }
+.notes p { margin: 0; }
+details { border-top: 1px solid var(--line); padding-top: 12px; }
+summary { min-height: 32px; cursor: pointer; font-weight: 500; color: var(--ink); }
+.opt { display: flex; gap: 10px; align-items: flex-start; margin-top: 8px; }
+.opt input { width: 22px; height: 22px; margin: 2px 0 0; flex: none; accent-color: var(--accent); }
+
+/* Viewer */
+.viewer {
+  position: fixed; inset: 0; z-index: 20; display: flex; flex-direction: column; background: var(--bg);
+  padding: env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px) env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px);
+}
+.bar { display: flex; align-items: center; gap: 2px; min-height: 52px; padding: 0 6px; background: var(--surface); border-bottom: 1px solid var(--line); }
+.ibtn { min-width: 44px; min-height: 44px; border: 0; border-radius: 10px; background: transparent; display: grid; place-items: center; }
+.ibtn[aria-pressed="true"] { background: color-mix(in srgb, var(--accent) 18%, transparent); color: var(--accent); }
+.vtitle { flex: 1; min-width: 0; padding: 0 4px; font: 500 .9375rem var(--font-mono); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.stage { flex: 1; min-height: 0; position: relative; background: #fff; }
+.stage iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; background: #fff; }
+.source { position: absolute; inset: 0; margin: 0; padding: 14px; overflow: auto; background: var(--surface); color: var(--ink); font: 13px/1.55 var(--font-mono); white-space: pre-wrap; word-break: break-all; }
+.copy { position: absolute; right: 12px; bottom: 12px; box-shadow: 0 2px 10px rgb(0 0 0 / .2); }
+.viewer.immersive .bar { display: none; }
+.fab {
+  position: fixed; z-index: 30; width: 44px; height: 44px; border-radius: 50%; border: 1px solid var(--line);
+  background: color-mix(in srgb, var(--surface) 88%, transparent); color: var(--ink); display: grid; place-items: center;
+  top: calc(env(safe-area-inset-top, 0px) + 8px); right: calc(env(safe-area-inset-right, 0px) + 8px);
+}
+svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+@media (prefers-reduced-motion: no-preference) { .tab, .pick { transition: background-color .15s; } }
+</style>
+</head>
+<body>
+<main class="wrap" id="home">
+  <header>
+    <h1>เปิดไฟล์ HTML</h1>
+    <p class="lead">เลือกไฟล์ .html จากเครื่องหรือวางโค้ด แล้วดูผลได้ทันทีบนไอโฟน</p>
+  </header>
+
+  <div class="tabs" role="tablist">
+    <button class="tab" role="tab" id="tab-file" aria-selected="true" aria-controls="p-file">เลือกไฟล์</button>
+    <button class="tab" role="tab" id="tab-paste" aria-selected="false" aria-controls="p-paste">วางโค้ด</button>
+  </div>
+
+  <section class="panel" data-p="file" id="p-file" role="tabpanel" aria-labelledby="tab-file">
+    <label class="pick" id="drop" for="file-input">
+      <svg viewBox="0 0 24 24" aria-hidden="true" style="width:32px;height:32px"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="m10 13-2 2 2 2M14 13l2 2-2 2"/></svg>
+      <span>แตะเพื่อเลือกไฟล์ HTML</span>
+      <small>จากแอป ไฟล์ iCloud Drive หรือ Google Drive</small>
+    </label>
+    <input class="sr" id="file-input" type="file" accept=".html,.htm,.xhtml,text/html">
+  </section>
+
+  <section class="panel" data-p="paste" id="p-paste" role="tabpanel" aria-labelledby="tab-paste" hidden>
+    <label for="code" class="sr">โค้ด HTML</label>
+    <textarea id="code" spellcheck="false" autocapitalize="off" autocorrect="off" placeholder="วางโค้ด HTML ที่นี่"></textarea>
+    <button class="btn primary" id="run" type="button">เปิดดูผล</button>
+  </section>
+
+  <p class="msg" id="msg" role="status" aria-live="polite"></p>
+
+  <section class="recent">
+    <div class="recent-head">
+      <h2>เปิดล่าสุด</h2>
+      <button class="link" id="clear" type="button" hidden>ล้างทั้งหมด</button>
+    </div>
+    <ul class="list" id="list"></ul>
+    <div class="empty" id="empty" hidden>
+      <p>ยังไม่มีไฟล์ที่เปิดไว้ ไฟล์ที่เปิดจะถูกเก็บในเบราว์เซอร์นี้เท่านั้น</p>
+      <button class="btn" id="sample" type="button">ลองเปิดไฟล์ตัวอย่าง</button>
+    </div>
+  </section>
+
+  <div class="notes">
+    <p>รองรับไฟล์ HTML ไฟล์เดียวที่มี CSS และ JavaScript อยู่ในไฟล์ ถ้าไฟล์เรียกใช้ CSS JS หรือรูปที่แยกอยู่ในเครื่อง ส่วนนั้นจะไม่แสดง ต้องรวมเข้าไฟล์เดียวก่อน</p>
+    <details>
+      <summary>ตั้งค่า</summary>
+      <label class="opt"><input type="checkbox" id="same-origin"><span>ให้หน้าที่เปิดใช้ localStorage ได้ เปิดเฉพาะกับไฟล์ที่คุณเขียนเองหรือไว้ใจ</span></label>
+    </details>
+  </div>
+</main>
+
+<section class="viewer" id="viewer" hidden aria-label="ผลลัพธ์">
+  <div class="bar">
+    <button class="ibtn" id="back" type="button" aria-label="กลับ"><svg viewBox="0 0 24 24"><path d="m15 5-7 7 7 7"/></svg></button>
+    <span class="vtitle" id="vtitle"></span>
+    <button class="ibtn" id="reload" type="button" aria-label="โหลดใหม่"><svg viewBox="0 0 24 24"><path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M20 5v6h-6"/></svg></button>
+    <button class="ibtn" id="srcbtn" type="button" aria-label="ดูโค้ด" aria-pressed="false"><svg viewBox="0 0 24 24"><path d="m9 8-4 4 4 4M15 8l4 4-4 4"/></svg></button>
+    <button class="ibtn" id="full" type="button" aria-label="เต็มจอ"><svg viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
+  </div>
+  <div class="stage">
+    <iframe id="frame" title="ผลลัพธ์ HTML"></iframe>
+    <pre class="source" id="source" hidden></pre>
+    <button class="btn copy" id="copy" type="button" hidden>คัดลอกโค้ด</button>
+  </div>
+</section>
+<button class="fab" id="unfull" type="button" hidden aria-label="แสดงแถบเครื่องมือ"><svg viewBox="0 0 24 24"><path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5"/></svg></button>
+
+<script>
+(function () {
+  var $ = function (id) { return document.getElementById(id); };
+  var SAMPLE = '<!doctype html><html lang="th"><meta name="viewport" content="width=device-width,initial-scale=1"><title>ตัวอย่าง</title><style>body{font-family:system-ui;padding:24px;line-height:1.5}button{font-size:18px;padding:12px 20px}</style><h1>ไฟล์ตัวอย่าง</h1><p>สคริปต์ทำงานได้ กดปุ่มเพื่อทดสอบ</p><button id="b">นับ 0</button><script>var n=0;document.getElementById("b").onclick=function(){this.textContent="นับ "+(++n)}<\/script></html>';
+  var MAX_ITEMS = 20, MAX_BYTES = 12 * 1024 * 1024;
+  var cur = null;
+
+  /* ---------- storage (per-browser convenience, may be unavailable) ---------- */
+  function openDb() {
+    return new Promise(function (res, rej) {
+      try {
+        var r = indexedDB.open('html-opener', 1);
+        r.onupgradeneeded = function () { r.result.createObjectStore('docs', { keyPath: 'id' }); };
+        r.onsuccess = function () { res(r.result); };
+        r.onerror = function () { rej(r.error); };
+      } catch (e) { rej(e); }
+    });
+  }
+  function run(mode, fn) {
+    return openDb().then(function (d) {
+      return new Promise(function (res, rej) {
+        var t = d.transaction('docs', mode), out = fn(t.objectStore('docs'));
+        t.oncomplete = function () { res(out && 'result' in out ? out.result : undefined); };
+        t.onerror = t.onabort = function () { rej(t.error); };
+      });
+    });
+  }
+  function getAll() { return run('readonly', function (s) { return s.getAll(); }).then(function (a) { return (a || []).sort(function (x, y) { return y.ts - x.ts; }); }).catch(function () { return []; }); }
+  function put(doc) { return run('readwrite', function (s) { return s.put(doc); }).catch(function () {}); }
+  function del(id) { return run('readwrite', function (s) { return s.delete(id); }).catch(function () {}); }
+  function clearAll() { return run('readwrite', function (s) { return s.clear(); }).catch(function () {}); }
+
+  function saveDoc(name, html) {
+    return put({ id: name, name: name, html: html, size: new Blob([html]).size, ts: Date.now() })
+      .then(getAll)
+      .then(function (all) { return Promise.all(all.slice(MAX_ITEMS).map(function (d) { return del(d.id); })); })
+      .then(renderList);
+  }
+
+  /* ---------- helpers ---------- */
+  function fmtSize(b) { return b < 1024 ? b + ' B' : b < 1048576 ? (b / 1024).toFixed(1) + ' KB' : (b / 1048576).toFixed(1) + ' MB'; }
+  function fmtTime(ts) { try { return new Date(ts).toLocaleString('th-TH', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }); } catch (e) { return ''; } }
+  function say(t) { $('msg').textContent = t || ''; }
+  function decode(buf) {
+    var head = '';
+    try { head = new TextDecoder('windows-1252').decode(buf.slice(0, 2048)); } catch (e) {}
+    var m = head.match(/charset\s*=\s*["']?([\w-]+)/i), label = 'utf-8';
+    if (m) { label = m[1].toLowerCase(); if (label === 'tis-620' || label === 'iso-8859-11') label = 'windows-874'; }
+    try { return new TextDecoder(label).decode(buf); } catch (e) { return new TextDecoder('utf-8').decode(buf); }
+  }
+  function sandboxValue() {
+    var v = 'allow-scripts allow-forms allow-modals allow-popups allow-popups-to-escape-sandbox';
+    return $('same-origin').checked ? v + ' allow-same-origin' : v;
+  }
+
+  /* ---------- home ---------- */
+  function renderList() {
+    getAll().then(function (docs) {
+      var ul = $('list'); ul.textContent = '';
+      $('empty').hidden = docs.length > 0;
+      $('clear').hidden = docs.length === 0;
+      docs.forEach(function (d) {
+        var li = document.createElement('li'); li.className = 'item';
+        var open = document.createElement('button'); open.className = 'open'; open.type = 'button'; open.dataset.id = d.id;
+        var n = document.createElement('span'); n.className = 'name'; n.textContent = d.name;
+        var m = document.createElement('span'); m.className = 'meta'; m.textContent = fmtSize(d.size) + ' · ' + fmtTime(d.ts);
+        open.append(n, m);
+        var x = document.createElement('button'); x.className = 'del'; x.type = 'button'; x.dataset.id = d.id; x.setAttribute('aria-label', 'ลบ ' + d.name);
+        x.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>';
+        li.append(open, x); ul.append(li);
+      });
+      ul._docs = docs;
+    });
+  }
+  $('list').addEventListener('click', function (e) {
+    var o = e.target.closest('.open'), x = e.target.closest('.del'), docs = this._docs || [];
+    if (o) { var d = docs.filter(function (z) { return z.id === o.dataset.id; })[0]; if (d) openDoc(d.name, d.html, false); }
+    if (x) { del(x.dataset.id).then(renderList); }
+  });
+  $('clear').addEventListener('click', function () { clearAll().then(renderList); });
+  $('sample').addEventListener('click', function () { openDoc('ตัวอย่าง.html', SAMPLE, true); });
+
+  function setTab(name) {
+    ['file', 'paste'].forEach(function (k) {
+      var on = k === name;
+      $('tab-' + k).setAttribute('aria-selected', on);
+      $('p-' + k).hidden = !on;
+    });
+  }
+  $('tab-file').addEventListener('click', function () { setTab('file'); });
+  $('tab-paste').addEventListener('click', function () { setTab('paste'); });
+
+  function loadFile(file) {
+    say('');
+    if (!file) return;
+    if (file.size > MAX_BYTES) { say('ไฟล์ใหญ่เกิน 12 MB เปิดไม่ได้'); return; }
+    file.arrayBuffer().then(function (buf) { openDoc(file.name, decode(buf), true); })
+      .catch(function () { say('อ่านไฟล์ไม่ได้ ลองเลือกไฟล์ใหม่อีกครั้ง'); });
+  }
+  $('file-input').addEventListener('change', function () { loadFile(this.files[0]); this.value = ''; });
+  $('run').addEventListener('click', function () {
+    var t = $('code').value.trim();
+    if (!t) { say('ยังไม่ได้วางโค้ด'); return; }
+    say('');
+    openDoc('โค้ดที่วาง ' + fmtTime(Date.now()) + '.html', t, true);
+  });
+
+  var drop = $('drop');
+  ['dragenter', 'dragover'].forEach(function (ev) { document.addEventListener(ev, function (e) { e.preventDefault(); drop.classList.add('drag'); }); });
+  ['dragleave', 'drop'].forEach(function (ev) { document.addEventListener(ev, function (e) { e.preventDefault(); drop.classList.remove('drag'); }); });
+  document.addEventListener('drop', function (e) { if (e.dataTransfer && e.dataTransfer.files[0]) loadFile(e.dataTransfer.files[0]); });
+
+  try { $('same-origin').checked = localStorage.getItem('same-origin') === '1'; } catch (e) {}
+  $('same-origin').addEventListener('change', function () { try { localStorage.setItem('same-origin', this.checked ? '1' : '0'); } catch (e) {} });
+
+  /* ---------- viewer ---------- */
+  function showSource(on) {
+    $('source').hidden = !on; $('copy').hidden = !on;
+    $('srcbtn').setAttribute('aria-pressed', on);
+    if (on) $('source').textContent = cur ? cur.html : '';
+  }
+  function setImmersive(on) {
+    $('viewer').classList.toggle('immersive', on);
+    $('unfull').hidden = !on;
+  }
+  function load() { var f = $('frame'); f.setAttribute('sandbox', sandboxValue()); f.srcdoc = cur.html; }
+  function openDoc(name, html, remember) {
+    cur = { name: name, html: html };
+    $('vtitle').textContent = name;
+    showSource(false); setImmersive(false); load();
+    $('viewer').hidden = true; $('viewer').hidden = false;
+    $('home').hidden = true;
+    if (remember) saveDoc(name, html);
+  }
+  function closeDoc() {
+    $('frame').srcdoc = ''; cur = null;
+    setImmersive(false); $('viewer').hidden = true; $('home').hidden = false;
+    window.scrollTo(0, 0);
+  }
+  $('back').addEventListener('click', closeDoc);
+  $('reload').addEventListener('click', function () { if (cur) { $('frame').srcdoc = ''; setTimeout(load, 30); } });
+  $('srcbtn').addEventListener('click', function () { showSource($('source').hidden); });
+  $('full').addEventListener('click', function () { setImmersive(true); });
+  $('unfull').addEventListener('click', function () { setImmersive(false); });
+  $('copy').addEventListener('click', function () {
+    var b = this, ok = function () { b.textContent = 'คัดลอกแล้ว'; setTimeout(function () { b.textContent = 'คัดลอกโค้ด'; }, 1500); };
+    var fallback = function () {
+      var r = document.createRange(); r.selectNodeContents($('source'));
+      var s = getSelection(); s.removeAllRanges(); s.addRange(r);
+      b.textContent = 'เลือกข้อความแล้ว กดคัดลอกเอง'; setTimeout(function () { b.textContent = 'คัดลอกโค้ด'; }, 2500);
+    };
+    try { navigator.clipboard.writeText(cur.html).then(ok, fallback); } catch (e) { fallback(); }
+  });
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && !$('viewer').hidden) closeDoc(); });
+
+  renderList();
+})();
+</script>
+</body>
+</html>
